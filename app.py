@@ -9,41 +9,45 @@ st.set_page_config(page_title="Exportar Fluxo de Caixa", layout="wide")
 
 @st.cache_resource
 def carregar_dados():
-    conn_str = (
-        'DRIVER={ODBC Driver 17 for SQL Server};'
-        'SERVER=sx-global.database.windows.net;'
-        'DATABASE=sx_comercial;'
-        'UID=paulo.ferraz;'
-        'PWD=Gs!^42j$G0f0^EI#ZjRv'
-    )
-    conn = pyodbc.connect(conn_str)
-    query = """
-        SELECT
-            nro_unico AS numero_unico,
-            tipo_fluxo,
-            desdobramento,
-            nro_nota,
-            serie_nota,
-            nro_unico_nota,
-            data_faturamento,
-            data_negociacao,
-            data_movimentacao,
-            data_vencimento,
-            data_baixa,
-            nome_parceiro,
-            cnpj_cpf,
-            desc_top,
-            desc_projeto,
-            historico,
-            valor_desdobramento,
-            valor_baixa,
-            status_titulo
-        FROM nacional_fluxo;
-    """
-    df = pd.read_sql(query, conn)
-    conn.close()
-    df['data_faturamento'] = pd.to_datetime(df['data_faturamento'], errors='coerce')
-    return df
+    try:
+        conn_str = (
+            'DRIVER={ODBC Driver 17 for SQL Server};'
+            'SERVER=sx-global.database.windows.net;'
+            'DATABASE=sx_comercial;'
+            'UID=paulo.ferraz;'
+            'PWD=Gs!^42j$G0f0^EI#ZjRv'
+        )
+        conn = pyodbc.connect(conn_str)
+        query = """
+            SELECT
+                nro_unico AS numero_unico,
+                tipo_fluxo,
+                desdobramento,
+                nro_nota,
+                serie_nota,
+                nro_unico_nota,
+                data_faturamento,
+                data_negociacao,
+                data_movimentacao,
+                data_vencimento,
+                data_baixa,
+                nome_parceiro,
+                cnpj_cpf,
+                desc_top,
+                desc_projeto,
+                historico,
+                valor_desdobramento,
+                valor_baixa,
+                status_titulo
+            FROM nacional_fluxo;
+        """
+        df = pd.read_sql(query, conn)
+        conn.close()
+        df['data_faturamento'] = pd.to_datetime(df['data_faturamento'], errors='coerce')
+        return df
+    except Exception as e:
+        st.error(f"Erro ao carregar dados: {e}")
+        st.stop()
 
 # Codifica imagem da logo
 with open("nacional-escuro.svg", "rb") as image_file:
