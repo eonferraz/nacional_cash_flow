@@ -12,10 +12,10 @@ def carregar_dados():
     try:
         conn_str = (
             'DRIVER={ODBC Driver 17 for SQL Server};'
-            'SERVER=sx-global.database.windows.net;'
-            'DATABASE=sx_comercial;'
-            'UID=paulo.ferraz;'
-            'PWD=Gs!^42j$G0f0^EI#ZjRv'
+            'SERVER=benu.database.windows.net,1433;'
+            'DATABASE=benu;'
+            'UID=eduardo.ferraz;'
+            'PWD=8h!0+a~jL8]B6~^5s5+v'
         )
         conn = pyodbc.connect(conn_str)
         query = """
