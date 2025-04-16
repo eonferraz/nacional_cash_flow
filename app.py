@@ -20,7 +20,7 @@ def carregar_dados():
         conn = pyodbc.connect(conn_str)
         query = """
             SELECT
-                nro_unico AS numero_unico,
+                nro_unico,
                 tipo_fluxo,
                 desdobramento,
                 nro_nota,
