@@ -1,80 +1,105 @@
 import streamlit as st
 import pandas as pd
 import pyodbc
-import plotly.express as px
+from io import BytesIO
+from datetime import datetime
+import base64
 
-# Conexão fixa com Azure SQL
-conn = pyodbc.connect(
-    'DRIVER={ODBC Driver 17 for SQL Server};'
-    'SERVER=sx-global.database.windows.net;'
-    'DATABASE=sx_comercial;'
-    'UID=paulo.ferraz;'
-    'PWD=Gs!^42j$G0f0^EI#ZjRv'
-)
+st.set_page_config(page_title="Exportar Fluxo de Caixa", layout="wide")
 
-@st.cache_data(ttl=3600)
+@st.cache_resource
 def carregar_dados():
+    conn_str = (
+        'DRIVER={ODBC Driver 17 for SQL Server};'
+        'SERVER=sx-global.database.windows.net;'
+        'DATABASE=sx_comercial;'
+        'UID=paulo.ferraz;'
+        'PWD=Gs!^42j$G0f0^EI#ZjRv'
+    )
+    conn = pyodbc.connect(conn_str)
     query = """
         SELECT
-            nro_unico,
-            tipo_fluxo,
-            desdobramento,
-            nro_nota,
-            serie_nota,
-            nro_unico_nota,
-            data_faturamento,
-            data_negociacao,
-            data_movimentacao,
-            data_vencimento,
-            data_baixa,
-            nome_parceiro,
-            cnpj_cpf,
-            desc_top,
-            desc_projeto,
-            historico,
-            valor_desdobramento,
-            valor_baixa,
-            status_titulo
-        FROM nacional_fluxo
+            nro_unico AS "Nº Único",
+            tipo_fluxo AS "Tipo de Fluxo",
+            desdobramento AS "Desdobramento",
+            nro_nota AS "Nº Nota",
+            serie_nota AS "Série",
+            nro_unico_nota AS "Nº Único da Nota",
+            data_faturamento AS "Data de Faturamento",
+            data_negociacao AS "Data de Negociação",
+            data_movimentacao AS "Data de Movimento",
+            data_vencimento AS "Vencimento",
+            data_baixa AS "Data de Baixa",
+            nome_parceiro AS "Parceiro",
+            cnpj_cpf AS "CNPJ",
+            desc_top AS "Tipo de Operação",
+            desc_projeto AS "Projeto",
+            historico AS "Histórico",
+            valor_desdobramento AS "Valor do Desdobramento",
+            valor_baixa AS "Valor da Baixa",
+            status_titulo AS "Status"
+        FROM nacional_fluxo;
     """
-    return pd.read_sql(query, conn)
+    df = pd.read_sql(query, conn)
+    conn.close()
+    df['Data de Faturamento'] = pd.to_datetime(df['Data de Faturamento'], errors='coerce')
+    return df
 
-st.set_page_config(page_title="Fluxo Financeiro - Nacional", layout="wide")
-st.title("Fluxo de Caixa - Nacional")
+# Codifica imagem da logo
+with open("nacional-escuro.svg", "rb") as image_file:
+    encoded = base64.b64encode(image_file.read()).decode()
+logo_img = f"data:image/svg+xml;base64,{encoded}"
 
-# Dados
-with st.spinner("Carregando dados..."):
-    df = carregar_dados()
+# Header com logo e título alinhados verticalmente ao centro
+st.markdown(f"""
+    <div style='display: flex; align-items: center; gap: 20px;'>
+        <img src='{logo_img}' width='80'>
+        <h1 style='margin: 0;'>Fluxo de Caixa</h1>
+    </div>
+""", unsafe_allow_html=True)
+
+# Carrega dados
+original_df = carregar_dados()
 
 # Filtros
-col1, col2 = st.columns(2)
+st.sidebar.header("Filtros")
+hoje = datetime.today()
+data_inicio = st.sidebar.date_input("Data Inicial", value=datetime(hoje.year, 1, 1))
+data_fim = st.sidebar.date_input("Data Final", value=hoje)
 
-with col1:
-    parceiros = st.multiselect("Filtrar por parceiro:", options=sorted(df["nome_parceiro"].dropna().unique()), default=None)
+parceiros = original_df['Parceiro'].dropna().unique().tolist()
+status_list = original_df['Status'].dropna().unique().tolist()
 
-with col2:
-    status = st.multiselect("Filtrar por status:", options=sorted(df["status_titulo"].dropna().unique()), default=None)
+filtro_parceiro = st.sidebar.multiselect("Parceiro", parceiros)
+filtro_status = st.sidebar.multiselect("Status do Título", status_list)
 
-if parceiros:
-    df = df[df["nome_parceiro"].isin(parceiros)]
-if status:
-    df = df[df["status_titulo"].isin(status)]
+# Aplica filtros
+df = original_df.copy()
+df = df[df['Data de Faturamento'].notna()]
+df = df[(df['Data de Faturamento'] >= pd.to_datetime(data_inicio)) & (df['Data de Faturamento'] <= pd.to_datetime(data_fim))]
+if filtro_parceiro:
+    df = df[df['Parceiro'].isin(filtro_parceiro)]
+if filtro_status:
+    df = df[df['Status'].isin(filtro_status)]
 
-# Visão Geral
-st.subheader("Resumo do Fluxo")
-resumo = df.groupby("tipo_fluxo")["valor_desdobramento"].sum().reset_index()
-st.dataframe(resumo, use_container_width=True)
+# Exibe dados
+st.dataframe(df, use_container_width=True)
 
-# Evolução temporal
-st.subheader("Evolução Temporal")
-df_evol = df.copy()
-df_evol["data"] = pd.to_datetime(df_evol["data_negociacao"])
+# Exporta para Excel com ajuste de largura
+buffer = BytesIO()
+with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+    df.to_excel(writer, sheet_name='Fluxo de Caixa', index=False)
+    workbook = writer.book
+    worksheet = writer.sheets['Fluxo de Caixa']
+    for i, col in enumerate(df.columns):
+        largura = max(df[col].astype(str).map(len).max(), len(col)) + 2
+        worksheet.set_column(i, i, largura)
 
-fig = px.line(df_evol.groupby(["data", "tipo_fluxo"])["valor_desdobramento"].sum().reset_index(),
-              x="data", y="valor_desdobramento", color="tipo_fluxo",
-              title="Fluxo por Tipo ao Longo do Tempo")
-st.plotly_chart(fig, use_container_width=True)
+nome_arquivo = f"fluxo_filtrado_{datetime.today().strftime('%Y%m%d')}.xlsx"
 
-# Tabela detalhada
-st.subheader("Tabela Detalhada")
-st.dataframe(df.sort_values("data_negociacao", ascending=False), use_container_width=True)
+st.download_button(
+    label="📥 Baixar Excel",
+    data=buffer.getvalue(),
+    file_name=nome_arquivo,
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
