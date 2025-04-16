@@ -57,7 +57,7 @@ logo_img = f"data:image/svg+xml;base64,{encoded}"
 
 # Header com logo e título alinhados verticalmente ao centro
 st.markdown(f"""
-    <div style='display: flex; align-items: center; gap: 20px;'>
+    <div style='display: flex; align-items: center; gap: 10px;'>
         <img src='{logo_img}' width='80'>
         <h1 style='margin: 0;'>Fluxo de Caixa</h1>
     </div>
