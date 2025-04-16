@@ -120,16 +120,8 @@ with col1:
 with col2:
     st.metric("Total Baixado", f"R$ {total_baixa:,.2f}".replace('.', '#').replace(',', '.').replace('#', ','))
 
-# Exibe dados com cor para tipo de fluxo
-def highlight_tipo_fluxo(row):
-    if row['Tipo de Fluxo'] == 'Despesa':
-        return ['background-color: #ffdddd'] * len(row)
-    elif row['Tipo de Fluxo'] == 'Receita':
-        return ['background-color: #ddffdd'] * len(row)
-    else:
-        return [''] * len(row)
-
-st.dataframe(df.style.apply(highlight_tipo_fluxo, axis=1), use_container_width=True)
+# Exibe dados
+st.dataframe(df, use_container_width=True)
 
 # Exporta para Excel com ajuste de largura
 buffer = BytesIO()
