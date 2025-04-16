@@ -12,42 +12,38 @@ def carregar_dados():
     try:
         conn_str = (
             'DRIVER={ODBC Driver 17 for SQL Server};'
-            'SERVER=benu.database.windows.net,1433;'
-            'DATABASE=benu;'
-            'UID=eduardo.ferraz;'
-            'PWD=8h!0+a~jL8]B6~^5s5+v'
+            'SERVER=sx-global.database.windows.net;'
+            'DATABASE=sx_comercial;'
+            'UID=paulo.ferraz;'
+            'PWD=Gs!^42j$G0f0^EI#ZjRv'
         )
         conn = pyodbc.connect(conn_str)
         query = """
             SELECT
-                CAST(nro_unico AS INT) AS numero_unico,
-                tipo_fluxo,
-                CAST(desdobramento AS INT) AS desdobramento,
-                CAST(nro_nota AS INT) AS nro_nota,
-                serie_nota,
-                CAST(nro_unico_nota AS INT) AS nro_unico_nota,
-                CAST(data_faturamento AS DATE) AS data_faturamento,
-                CAST(data_negociacao AS DATE) AS data_negociacao,
-                CAST(data_movimentacao AS DATE) AS data_movimentacao,
-                CAST(data_vencimento AS DATE) AS data_vencimento,
-                CAST(data_baixa AS DATE) AS data_baixa,
-                nome_parceiro,
-                cnpj_cpf,
-                desc_top,
-                desc_projeto,
-                historico,
-                CAST(valor_desdobramento AS FLOAT) AS valor_desdobramento,
-                CAST(valor_baixa AS FLOAT) AS valor_baixa,
-                status_titulo
+                CAST(nro_unico AS INT) AS "Número Único",
+                tipo_fluxo AS "Tipo de Fluxo",
+                CAST(desdobramento AS INT) AS "Desdobramento",
+                CAST(nro_nota AS INT) AS "Número da Nota",
+                serie_nota AS "Série",
+                CAST(nro_unico_nota AS INT) AS "Número Único Nota",
+                FORMAT(data_faturamento, 'dd/MM/yyyy') AS "Data de Faturamento",
+                FORMAT(data_negociacao, 'dd/MM/yyyy') AS "Data de Negociação",
+                FORMAT(data_movimentacao, 'dd/MM/yyyy') AS "Data de Movimentação",
+                FORMAT(data_vencimento, 'dd/MM/yyyy') AS "Data de Vencimento",
+                FORMAT(data_baixa, 'dd/MM/yyyy') AS "Data de Baixa",
+                nome_parceiro AS "Parceiro",
+                cnpj_cpf AS "CNPJ/CPF",
+                desc_top AS "Operação",
+                desc_projeto AS "Projeto",
+                historico AS "Histórico",
+                FORMAT(valor_desdobramento, 'C', 'pt-BR') AS "Valor do Desdobramento",
+                FORMAT(valor_baixa, 'C', 'pt-BR') AS "Valor da Baixa",
+                CASE WHEN provisao = 'S' THEN 'Provisão' ELSE 'Efetivo' END AS "Tipo de Registro",
+                status_titulo AS "Status do Título"
             FROM nacional_fluxo;
         """
-        cursor = conn.cursor()
-        cursor.execute(query)
-        columns = [col[0] for col in cursor.description]
-        rows = cursor.fetchall()
-        df = pd.DataFrame.from_records(rows, columns=columns)
+        df = pd.read_sql(query, conn)
         conn.close()
-        df['data_faturamento'] = pd.to_datetime(df['data_faturamento'], errors='coerce')
         return df
     except Exception as e:
         st.error(f"Erro ao carregar dados: {e}")
@@ -75,20 +71,39 @@ hoje = datetime.today()
 data_inicio = st.sidebar.date_input("Data Inicial", value=datetime(hoje.year, 1, 1))
 data_fim = st.sidebar.date_input("Data Final", value=hoje)
 
-parceiros = original_df['nome_parceiro'].dropna().unique().tolist()
-status_list = original_df['status_titulo'].dropna().unique().tolist()
+parceiros = original_df['Parceiro'].dropna().unique().tolist()
+status_list = original_df['Status do Título'].dropna().unique().tolist()
+tipo_fluxo_list = original_df['Tipo de Fluxo'].dropna().unique().tolist()
 
 filtro_parceiro = st.sidebar.multiselect("Parceiro", parceiros)
 filtro_status = st.sidebar.multiselect("Status do Título", status_list)
+filtro_fluxo = st.sidebar.multiselect("Tipo de Fluxo", tipo_fluxo_list)
 
 # Aplica filtros
 df = original_df.copy()
-df = df[df['data_faturamento'].notna()]
-df = df[(df['data_faturamento'] >= pd.to_datetime(data_inicio)) & (df['data_faturamento'] <= pd.to_datetime(data_fim))]
+df['Data de Faturamento'] = pd.to_datetime(df['Data de Faturamento'], dayfirst=True, errors='coerce')
+df = df[df['Data de Faturamento'].notna()]
+df = df[(df['Data de Faturamento'] >= pd.to_datetime(data_inicio)) & (df['Data de Faturamento'] <= pd.to_datetime(data_fim))]
 if filtro_parceiro:
-    df = df[df['nome_parceiro'].isin(filtro_parceiro)]
+    df = df[df['Parceiro'].isin(filtro_parceiro)]
 if filtro_status:
-    df = df[df['status_titulo'].isin(filtro_status)]
+    df = df[df['Status do Título'].isin(filtro_status)]
+if filtro_fluxo:
+    df = df[df['Tipo de Fluxo'].isin(filtro_fluxo)]
+
+# Totalizador
+st.markdown("### Totais")
+df_valores = original_df.copy()
+df_valores['Valor do Desdobramento'] = df_valores['Valor do Desdobramento'].replace('[R$\s]', '', regex=True).str.replace('.', '').str.replace(',', '.').astype(float)
+df_valores['Valor da Baixa'] = df_valores['Valor da Baixa'].replace('[R$\s]', '', regex=True).str.replace('.', '').str.replace(',', '.').astype(float)
+
+filtros_iguais = df_valores[df_valores['Parceiro'].isin(df['Parceiro']) & df_valores['Status do Título'].isin(df['Status do Título']) & df_valores['Tipo de Fluxo'].isin(df['Tipo de Fluxo'])]
+
+total_desdobramento = filtros_iguais['Valor do Desdobramento'].sum()
+total_baixa = filtros_iguais['Valor da Baixa'].sum()
+
+st.metric("Total Desdobrado", f"R$ {total_desdobramento:,.2f}".replace('.', '#').replace(',', '.').replace('#', ','))
+st.metric("Total Baixado", f"R$ {total_baixa:,.2f}".replace('.', '#').replace(',', '.').replace('#', ','))
 
 # Exibe dados
 st.dataframe(df, use_container_width=True)
