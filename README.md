@@ -1,4 +1,4 @@
-# Dashboard de Faturamento - Nacional Indústria Mecânica
+# Dashboard de Faturamento - Cashflow Indústria Mecânica
 
 Este projeto é um dashboard interativo desenvolvido em Streamlit para visualização dos dados de faturamento da empresa Nacional Indústria Mecânica.
 
