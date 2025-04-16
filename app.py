@@ -71,15 +71,15 @@ hoje = datetime.today()
 data_inicio = st.sidebar.date_input("Data Inicial", value=datetime(hoje.year, 1, 1))
 data_fim = st.sidebar.date_input("Data Final", value=hoje)
 
-parceiros = original_df['Parceiro'].dropna().unique().tolist()
-status_list = original_df['Status do Título'].dropna().unique().tolist()
-tipo_fluxo_list = original_df['Tipo de Fluxo'].dropna().unique().tolist()
-tipo_registro_list = original_df['Tipo de Registro'].dropna().unique().tolist()
+parceiros = sorted(original_df['Parceiro'].dropna().unique().tolist())
+status_list = sorted(original_df['Status do Título'].dropna().unique().tolist())
+tipo_fluxo_list = sorted(original_df['Tipo de Fluxo'].dropna().unique().tolist())
+tipo_registro_list = sorted(original_df['Tipo de Registro'].dropna().unique().tolist())
 
 filtro_parceiro = st.sidebar.multiselect("Parceiro", parceiros)
-filtro_status = st.sidebar.multiselect("Status do Título", status_list)
-filtro_fluxo = st.sidebar.multiselect("Tipo de Fluxo", tipo_fluxo_list)
-filtro_tipo_registro = st.sidebar.radio("Tipo de Registro", options=["Todos"] + tipo_registro_list, index=0)
+filtro_status = st.sidebar.selectbox("Status do Título", options=["Todos"] + status_list)
+filtro_fluxo = st.sidebar.selectbox("Tipo de Fluxo", options=["Todos"] + tipo_fluxo_list)
+filtro_tipo_registro = st.sidebar.selectbox("Tipo de Registro", options=["Todos"] + tipo_registro_list)
 
 # Aplica filtros
 df = original_df.copy()
@@ -88,15 +88,14 @@ df = df[df['Data de Faturamento'].notna()]
 df = df[(df['Data de Faturamento'] >= pd.to_datetime(data_inicio)) & (df['Data de Faturamento'] <= pd.to_datetime(data_fim))]
 if filtro_parceiro:
     df = df[df['Parceiro'].isin(filtro_parceiro)]
-if filtro_status:
-    df = df[df['Status do Título'].isin(filtro_status)]
-if filtro_fluxo:
-    df = df[df['Tipo de Fluxo'].isin(filtro_fluxo)]
+if filtro_status != "Todos":
+    df = df[df['Status do Título'] == filtro_status]
+if filtro_fluxo != "Todos":
+    df = df[df['Tipo de Fluxo'] == filtro_fluxo]
 if filtro_tipo_registro != "Todos":
     df = df[df['Tipo de Registro'] == filtro_tipo_registro]
 
-# Totalizador
-col1, col2 = st.columns(2)
+# Totalizador horizontal
 df_valores = df.copy()
 df_valores['Valor do Desdobramento'] = df_valores['Valor do Desdobramento'].replace('[R$\s]', '', regex=True).str.replace('.', '').str.replace(',', '.').astype(float)
 df_valores['Valor da Baixa'] = df_valores['Valor da Baixa'].replace('[R$\s]', '', regex=True).str.replace('.', '').str.replace(',', '.').astype(float)
@@ -104,6 +103,18 @@ df_valores['Valor da Baixa'] = df_valores['Valor da Baixa'].replace('[R$\s]', ''
 total_desdobramento = df_valores['Valor do Desdobramento'].sum()
 total_baixa = df_valores['Valor da Baixa'].sum()
 
+st.markdown("""
+<style>
+.metric-container {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 10px;
+}
+</style>
+<div class="metric-container">
+""", unsafe_allow_html=True)
+
+col1, col2 = st.columns(2)
 with col1:
     st.metric("Total Desdobrado", f"R$ {total_desdobramento:,.2f}".replace('.', '#').replace(',', '.').replace('#', ','))
 with col2:
