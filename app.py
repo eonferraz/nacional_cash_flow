@@ -1,120 +1,80 @@
 import streamlit as st
 import pandas as pd
 import pyodbc
-from io import BytesIO
-from datetime import datetime
-import base64
+import plotly.express as px
 
-st.set_page_config(page_title="Exportar Faturamento", layout="wide")
+# Conexão fixa com Azure SQL
+conn = pyodbc.connect(
+    'DRIVER={ODBC Driver 17 for SQL Server};'
+    'SERVER=sx-global.database.windows.net;'
+    'DATABASE=sx_comercial;'
+    'UID=paulo.ferraz;'
+    'PWD=Gs!^42j$G0f0^EI#ZjRv'
+)
 
-@st.cache_resource
+@st.cache_data(ttl=3600)
 def carregar_dados():
-    conn_str = (
-        'DRIVER={ODBC Driver 17 for SQL Server};'
-        'SERVER=benu.database.windows.net,1433;'
-        'DATABASE=benu;'
-        'UID=eduardo.ferraz;'
-        'PWD=8h!0+a~jL8]B6~^5s5+v'
-    )
-    conn = pyodbc.connect(conn_str)
     query = """
         SELECT
-          numero_nf AS "Número NF",
-          data_negociacao AS "Data Negociação",
-          data_faturamento AS "Data Faturamento",
-          ano_mes AS "Ano-Mês",
-          ano AS "Ano",
-          mes AS "Mês",
-          data_entrada AS "Data Entrada",
-          cod_parceiro AS "Código Parceiro",
-          cod_projeto AS "Código Projeto",
-          abrev_projeto AS "Abrev. Projeto",
-          projeto AS "Projeto",
-          cnpj AS "CNPJ",
-          parceiro AS "Parceiro",
-          cod_top AS "Código TOP",
-          [top] AS "TOP",
-          movimento AS "Movimento",
-          cliente AS "Cliente",
-          fornecedor AS "Fornecedor",
-          codigo AS "Código Produto",
-          descricao AS "Descrição",
-          ncm AS "NCM",
-          grupo AS "Grupo",
-          cfop AS "CFOP",
-          operacao AS "Operação",
-          qtd_negociada AS "Qtd. Negociada",
-          qtd_entregue AS "Qtd. Entregue",
-          status AS "Status",
-          saldo AS "Saldo",
-          valor_unitario AS "Valor Unitário",
-          valor_total AS "Valor Total",
-          valor_icms AS "Valor ICMS",
-          valor_ipi AS "Valor IPI",
-          receita AS "Receita"
-        FROM
-          nacional_faturamento;
+            nro_unico,
+            tipo_fluxo,
+            desdobramento,
+            nro_nota,
+            serie_nota,
+            nro_unico_nota,
+            data_faturamento,
+            data_negociacao,
+            data_movimentacao,
+            data_vencimento,
+            data_baixa,
+            nome_parceiro,
+            cnpj_cpf,
+            desc_top,
+            desc_projeto,
+            historico,
+            valor_desdobramento,
+            valor_baixa,
+            status_titulo
+        FROM nacional_fluxo
     """
-    df = pd.read_sql(query, conn)
-    conn.close()
-    df['Data Faturamento'] = pd.to_datetime(df['Data Faturamento'], errors='coerce')
-    return df
+    return pd.read_sql(query, conn)
 
-# Codifica imagem da logo
-with open("nacional-escuro.svg", "rb") as image_file:
-    encoded = base64.b64encode(image_file.read()).decode()
-logo_img = f"data:image/svg+xml;base64,{encoded}"
+st.set_page_config(page_title="Fluxo Financeiro - Nacional", layout="wide")
+st.title("Fluxo de Caixa - Nacional")
 
-# Header com logo e título alinhados verticalmente ao centro
-st.markdown(f"""
-    <div style='display: flex; align-items: center; gap: 20px;'>
-        <img src='{logo_img}' width='80'>
-        <h1 style='margin: 0;'>Dados de Faturamento</h1>
-    </div>
-""", unsafe_allow_html=True)
-
-# Carrega dados
-original_df = carregar_dados()
+# Dados
+with st.spinner("Carregando dados..."):
+    df = carregar_dados()
 
 # Filtros
-st.sidebar.header("Filtros")
-hoje = datetime.today()
-data_inicio = st.sidebar.date_input("Data Inicial", value=datetime(hoje.year, 1, 1))
-data_fim = st.sidebar.date_input("Data Final", value=hoje)
+col1, col2 = st.columns(2)
 
-parceiros = original_df['Parceiro'].dropna().unique().tolist()
-operacoes = original_df['Operação'].dropna().unique().tolist()
+with col1:
+    parceiros = st.multiselect("Filtrar por parceiro:", options=sorted(df["nome_parceiro"].dropna().unique()), default=None)
 
-filtro_parceiro = st.sidebar.multiselect("Parceiro", parceiros)
-filtro_operacao = st.sidebar.multiselect("Operação", operacoes)
+with col2:
+    status = st.multiselect("Filtrar por status:", options=sorted(df["status_titulo"].dropna().unique()), default=None)
 
-# Aplica filtros
-df = original_df.copy()
-df = df[df['Data Faturamento'].notna()]
-df = df[(df['Data Faturamento'] >= pd.to_datetime(data_inicio)) & (df['Data Faturamento'] <= pd.to_datetime(data_fim))]
-if filtro_parceiro:
-    df = df[df['Parceiro'].isin(filtro_parceiro)]
-if filtro_operacao:
-    df = df[df['Operação'].isin(filtro_operacao)]
+if parceiros:
+    df = df[df["nome_parceiro"].isin(parceiros)]
+if status:
+    df = df[df["status_titulo"].isin(status)]
 
-# Exibe dados
-st.dataframe(df, use_container_width=True)
+# Visão Geral
+st.subheader("Resumo do Fluxo")
+resumo = df.groupby("tipo_fluxo")["valor_desdobramento"].sum().reset_index()
+st.dataframe(resumo, use_container_width=True)
 
-# Exporta para Excel com ajuste de largura
-buffer = BytesIO()
-with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-    df.to_excel(writer, sheet_name='Faturamento', index=False)
-    workbook = writer.book
-    worksheet = writer.sheets['Faturamento']
-    for i, col in enumerate(df.columns):
-        largura = max(df[col].astype(str).map(len).max(), len(col)) + 2
-        worksheet.set_column(i, i, largura)
+# Evolução temporal
+st.subheader("Evolução Temporal")
+df_evol = df.copy()
+df_evol["data"] = pd.to_datetime(df_evol["data_negociacao"])
 
-nome_arquivo = f"faturamento_filtrado_{datetime.today().strftime('%Y%m%d')}.xlsx"
+fig = px.line(df_evol.groupby(["data", "tipo_fluxo"])["valor_desdobramento"].sum().reset_index(),
+              x="data", y="valor_desdobramento", color="tipo_fluxo",
+              title="Fluxo por Tipo ao Longo do Tempo")
+st.plotly_chart(fig, use_container_width=True)
 
-st.download_button(
-    label="📥 Baixar Excel",
-    data=buffer.getvalue(),
-    file_name=nome_arquivo,
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
+# Tabela detalhada
+st.subheader("Tabela Detalhada")
+st.dataframe(df.sort_values("data_negociacao", ascending=False), use_container_width=True)
