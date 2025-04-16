@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import pyodbc
 from io import BytesIO
-from datetime import datetime
+from datetime import datetime, timedelta
 import base64
 
 st.set_page_config(page_title="Exportar Fluxo de Caixa", layout="wide")
@@ -28,7 +28,7 @@ def carregar_dados():
                 CAST(nro_unico_nota AS INT) AS "Número Único Nota",
                 FORMAT(data_negociacao, 'dd/MM/yyyy') AS "Data de Negociação",
                 FORMAT(data_movimentacao, 'dd/MM/yyyy') AS "Data de Movimentação",
-                FORMAT(data_vencimento, 'dd/MM/yyyy') AS "Data de Vencimento",
+                data_vencimento AS "Data de Vencimento",
                 FORMAT(data_baixa, 'dd/MM/yyyy') AS "Data de Baixa",
                 cod_projeto AS "Código Projeto",
                 desc_projeto AS "Projeto",
@@ -65,12 +65,36 @@ st.markdown(f"""
 # Carrega dados
 original_df = carregar_dados()
 
-# Filtros
-st.sidebar.header("Filtros")
-hoje = datetime.today()
-data_inicio = st.sidebar.date_input("Data Inicial (Vencimento)", value=datetime(hoje.year, 1, 1))
-data_fim = st.sidebar.date_input("Data Final (Vencimento)", value=hoje)
+# Conversão de data
+original_df['Data de Vencimento'] = pd.to_datetime(original_df['Data de Vencimento'], errors='coerce')
+original_df = original_df[original_df['Data de Vencimento'].notna()]
 
+# Filtros rápidos e por data
+col1, col2, col3, col4, col5, col6 = st.columns([1,1,1,1,1,3])
+hoje = datetime.today()
+
+with col1:
+    data_inicio = st.date_input("Início", value=datetime(hoje.year, 1, 1))
+with col2:
+    data_fim = st.date_input("Fim", value=hoje)
+with col3:
+    if st.button("Hoje"):
+        data_inicio = data_fim = hoje
+with col4:
+    if st.button("Essa Semana"):
+        data_inicio = hoje - timedelta(days=hoje.weekday())
+        data_fim = hoje
+with col5:
+    if st.button("Esse Mês"):
+        data_inicio = datetime(hoje.year, hoje.month, 1)
+        data_fim = hoje
+with col6:
+    if st.button("Esse Ano"):
+        data_inicio = datetime(hoje.year, 1, 1)
+        data_fim = hoje
+
+# Filtros adicionais
+st.sidebar.header("Filtros Avançados")
 parceiros = sorted(original_df['Parceiro'].dropna().unique().tolist())
 status_list = sorted(original_df['Status do Título'].dropna().unique().tolist())
 tipo_fluxo_list = sorted(original_df['Tipo de Fluxo'].dropna().unique().tolist())
@@ -87,8 +111,6 @@ filtro_nome_projeto = st.sidebar.selectbox("Projeto", options=["Todos"] + nome_p
 
 # Aplica filtros
 df = original_df.copy()
-df['Data de Vencimento'] = pd.to_datetime(df['Data de Vencimento'], dayfirst=True, errors='coerce')
-df = df[df['Data de Vencimento'].notna()]
 df = df[(df['Data de Vencimento'] >= pd.to_datetime(data_inicio)) & (df['Data de Vencimento'] <= pd.to_datetime(data_fim))]
 if filtro_parceiro:
     df = df[df['Parceiro'].isin(filtro_parceiro)]
@@ -103,7 +125,7 @@ if filtro_cod_projeto != "Todos":
 if filtro_nome_projeto != "Todos":
     df = df[df['Projeto'] == filtro_nome_projeto]
 
-# Formata a data de vencimento para exibição
+# Formata datas para exibição
 df['Data de Vencimento'] = df['Data de Vencimento'].dt.strftime('%d/%m/%Y')
 
 # Totalizador horizontal
