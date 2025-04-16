@@ -19,16 +19,39 @@ def carregar_dados():
         )
         conn = pyodbc.connect(conn_str)
         query = """
-            SELECT * FROM nacional_fluxo;
+            SELECT
+                nro_unico AS numero_unico,
+                tipo_fluxo,
+                desdobramento,
+                nro_nota,
+                serie_nota,
+                nro_unico_nota,
+                data_faturamento,
+                data_negociacao,
+                data_movimentacao,
+                data_vencimento,
+                data_baixa,
+                nome_parceiro,
+                cnpj_cpf,
+                desc_top,
+                desc_projeto,
+                historico,
+                valor_desdobramento,
+                valor_baixa,
+                status_titulo
+            FROM nacional_fluxo;
         """
-        df = pd.read_sql(query, conn)
+        cursor = conn.cursor()
+        cursor.execute(query)
+        columns = [col[0] for col in cursor.description]
+        rows = cursor.fetchall()
+        df = pd.DataFrame.from_records(rows, columns=columns)
         conn.close()
         df['data_faturamento'] = pd.to_datetime(df['data_faturamento'], errors='coerce')
         return df
     except Exception as e:
         st.error(f"Erro ao carregar dados: {e}")
         st.stop()
-
 # Codifica imagem da logo
 with open("nacional-escuro.svg", "rb") as image_file:
     encoded = base64.b64encode(image_file.read()).decode()
