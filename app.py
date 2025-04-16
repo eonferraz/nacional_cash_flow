@@ -19,30 +19,30 @@ def carregar_dados():
     conn = pyodbc.connect(conn_str)
     query = """
         SELECT
-            nro_unico AS [Nº Único],
-            tipo_fluxo AS [Tipo de Fluxo],
-            desdobramento AS [Desdobramento],
-            nro_nota AS [Nº Nota],
-            serie_nota AS [Série],
-            nro_unico_nota AS [Nº Único da Nota],
-            data_faturamento AS [Data de Faturamento],
-            data_negociacao AS [Data de Negociação],
-            data_movimentacao AS [Data de Movimento],
-            data_vencimento AS [Vencimento],
-            data_baixa AS [Data de Baixa],
-            nome_parceiro AS [Parceiro],
-            cnpj_cpf AS [CNPJ],
-            desc_top AS [Tipo de Operação],
-            desc_projeto AS [Projeto],
-            historico AS [Histórico],
-            valor_desdobramento AS [Valor do Desdobramento],
-            valor_baixa AS [Valor da Baixa],
-            status_titulo AS [Status]
+            nro_unico AS numero_unico,
+            tipo_fluxo,
+            desdobramento,
+            nro_nota,
+            serie_nota,
+            nro_unico_nota,
+            data_faturamento,
+            data_negociacao,
+            data_movimentacao,
+            data_vencimento,
+            data_baixa,
+            nome_parceiro,
+            cnpj_cpf,
+            desc_top,
+            desc_projeto,
+            historico,
+            valor_desdobramento,
+            valor_baixa,
+            status_titulo
         FROM nacional_fluxo;
     """
     df = pd.read_sql(query, conn)
     conn.close()
-    df['Data de Faturamento'] = pd.to_datetime(df['Data de Faturamento'], errors='coerce')
+    df['data_faturamento'] = pd.to_datetime(df['data_faturamento'], errors='coerce')
     return df
 
 # Codifica imagem da logo
@@ -67,20 +67,20 @@ hoje = datetime.today()
 data_inicio = st.sidebar.date_input("Data Inicial", value=datetime(hoje.year, 1, 1))
 data_fim = st.sidebar.date_input("Data Final", value=hoje)
 
-parceiros = original_df['Parceiro'].dropna().unique().tolist()
-status_list = original_df['Status'].dropna().unique().tolist()
+parceiros = original_df['nome_parceiro'].dropna().unique().tolist()
+status_list = original_df['status_titulo'].dropna().unique().tolist()
 
 filtro_parceiro = st.sidebar.multiselect("Parceiro", parceiros)
 filtro_status = st.sidebar.multiselect("Status do Título", status_list)
 
 # Aplica filtros
 df = original_df.copy()
-df = df[df['Data de Faturamento'].notna()]
-df = df[(df['Data de Faturamento'] >= pd.to_datetime(data_inicio)) & (df['Data de Faturamento'] <= pd.to_datetime(data_fim))]
+df = df[df['data_faturamento'].notna()]
+df = df[(df['data_faturamento'] >= pd.to_datetime(data_inicio)) & (df['data_faturamento'] <= pd.to_datetime(data_fim))]
 if filtro_parceiro:
-    df = df[df['Parceiro'].isin(filtro_parceiro)]
+    df = df[df['nome_parceiro'].isin(filtro_parceiro)]
 if filtro_status:
-    df = df[df['Status'].isin(filtro_status)]
+    df = df[df['status_titulo'].isin(filtro_status)]
 
 # Exibe dados
 st.dataframe(df, use_container_width=True)
