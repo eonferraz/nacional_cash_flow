@@ -41,11 +41,7 @@ def carregar_dados():
                 status_titulo
             FROM nacional_fluxo;
         """
-        cursor = conn.cursor()
-        cursor.execute(query)
-        columns = [col[0] for col in cursor.description]
-        rows = cursor.fetchall()
-        df = pd.DataFrame.from_records(rows, columns=columns)
+        df = pd.read_sql(query, conn)
         conn.close()
         df['data_faturamento'] = pd.to_datetime(df['data_faturamento'], errors='coerce')
         return df
@@ -69,41 +65,20 @@ st.markdown(f"""
 # Carrega dados
 original_df = carregar_dados()
 
-# Filtros
-st.sidebar.header("Filtros")
-hoje = datetime.today()
-data_inicio = st.sidebar.date_input("Data Inicial", value=datetime(hoje.year, 1, 1))
-data_fim = st.sidebar.date_input("Data Final", value=hoje)
-
-parceiros = original_df['nome_parceiro'].dropna().unique().tolist()
-status_list = original_df['status_titulo'].dropna().unique().tolist()
-
-filtro_parceiro = st.sidebar.multiselect("Parceiro", parceiros)
-filtro_status = st.sidebar.multiselect("Status do Título", status_list)
-
-# Aplica filtros
-df = original_df.copy()
-df = df[df['data_faturamento'].notna()]
-df = df[(df['data_faturamento'] >= pd.to_datetime(data_inicio)) & (df['data_faturamento'] <= pd.to_datetime(data_fim))]
-if filtro_parceiro:
-    df = df[df['nome_parceiro'].isin(filtro_parceiro)]
-if filtro_status:
-    df = df[df['status_titulo'].isin(filtro_status)]
-
-# Exibe dados
-st.dataframe(df, use_container_width=True)
+# Exibe dados completos
+st.dataframe(original_df, use_container_width=True)
 
 # Exporta para Excel com ajuste de largura
 buffer = BytesIO()
 with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-    df.to_excel(writer, sheet_name='Fluxo de Caixa', index=False)
+    original_df.to_excel(writer, sheet_name='Fluxo de Caixa', index=False)
     workbook = writer.book
     worksheet = writer.sheets['Fluxo de Caixa']
-    for i, col in enumerate(df.columns):
-        largura = max(df[col].astype(str).map(len).max(), len(col)) + 2
+    for i, col in enumerate(original_df.columns):
+        largura = max(original_df[col].astype(str).map(len).max(), len(col)) + 2
         worksheet.set_column(i, i, largura)
 
-nome_arquivo = f"fluxo_filtrado_{datetime.today().strftime('%Y%m%d')}.xlsx"
+nome_arquivo = f"fluxo_completo_{datetime.today().strftime('%Y%m%d')}.xlsx"
 
 st.download_button(
     label="📥 Baixar Excel",
