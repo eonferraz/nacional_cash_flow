@@ -58,7 +58,7 @@ logo_img = f"data:image/svg+xml;base64,{encoded}"
 st.markdown(f"""
     <div style='display: flex; align-items: center; gap: 20px;'>
         <img src='{logo_img}' width='80'>
-        <h1 style='margin: 0;'>Dados de Faturamento</h1>
+        <h1 style='margin: 0;'>Fluxo de Caixa</h1>
     </div>
 """, unsafe_allow_html=True)
 
@@ -74,10 +74,12 @@ data_fim = st.sidebar.date_input("Data Final", value=hoje)
 parceiros = original_df['Parceiro'].dropna().unique().tolist()
 status_list = original_df['Status do Título'].dropna().unique().tolist()
 tipo_fluxo_list = original_df['Tipo de Fluxo'].dropna().unique().tolist()
+tipo_registro_list = original_df['Tipo de Registro'].dropna().unique().tolist()
 
 filtro_parceiro = st.sidebar.multiselect("Parceiro", parceiros)
 filtro_status = st.sidebar.multiselect("Status do Título", status_list)
 filtro_fluxo = st.sidebar.multiselect("Tipo de Fluxo", tipo_fluxo_list)
+filtro_tipo_registro = st.sidebar.radio("Tipo de Registro", options=["Todos"] + tipo_registro_list, index=0)
 
 # Aplica filtros
 df = original_df.copy()
@@ -90,9 +92,11 @@ if filtro_status:
     df = df[df['Status do Título'].isin(filtro_status)]
 if filtro_fluxo:
     df = df[df['Tipo de Fluxo'].isin(filtro_fluxo)]
+if filtro_tipo_registro != "Todos":
+    df = df[df['Tipo de Registro'] == filtro_tipo_registro]
 
 # Totalizador
-st.markdown("### Totais")
+col1, col2 = st.columns(2)
 df_valores = df.copy()
 df_valores['Valor do Desdobramento'] = df_valores['Valor do Desdobramento'].replace('[R$\s]', '', regex=True).str.replace('.', '').str.replace(',', '.').astype(float)
 df_valores['Valor da Baixa'] = df_valores['Valor da Baixa'].replace('[R$\s]', '', regex=True).str.replace('.', '').str.replace(',', '.').astype(float)
@@ -100,8 +104,10 @@ df_valores['Valor da Baixa'] = df_valores['Valor da Baixa'].replace('[R$\s]', ''
 total_desdobramento = df_valores['Valor do Desdobramento'].sum()
 total_baixa = df_valores['Valor da Baixa'].sum()
 
-st.metric("Total Desdobrado", f"R$ {total_desdobramento:,.2f}".replace('.', '#').replace(',', '.').replace('#', ','))
-st.metric("Total Baixado", f"R$ {total_baixa:,.2f}".replace('.', '#').replace(',', '.').replace('#', ','))
+with col1:
+    st.metric("Total Desdobrado", f"R$ {total_desdobramento:,.2f}".replace('.', '#').replace(',', '.').replace('#', ','))
+with col2:
+    st.metric("Total Baixado", f"R$ {total_baixa:,.2f}".replace('.', '#').replace(',', '.').replace('#', ','))
 
 # Exibe dados
 st.dataframe(df, use_container_width=True)
