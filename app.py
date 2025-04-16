@@ -32,10 +32,10 @@ def carregar_dados():
                 FORMAT(data_vencimento, 'dd/MM/yyyy') AS "Data de Vencimento",
                 FORMAT(data_baixa, 'dd/MM/yyyy') AS "Data de Baixa",
                 cod_projeto AS "Código Projeto",
+                desc_projeto AS "Projeto",
                 nome_parceiro AS "Parceiro",
                 cnpj_cpf AS "CNPJ/CPF",
                 desc_top AS "Operação",
-                desc_projeto AS "Projeto",
                 historico AS "Histórico",
                 FORMAT(valor_desdobramento, 'C', 'pt-BR') AS "Valor do Desdobramento",
                 FORMAT(valor_baixa, 'C', 'pt-BR') AS "Valor da Baixa",
@@ -76,13 +76,15 @@ parceiros = sorted(original_df['Parceiro'].dropna().unique().tolist())
 status_list = sorted(original_df['Status do Título'].dropna().unique().tolist())
 tipo_fluxo_list = sorted(original_df['Tipo de Fluxo'].dropna().unique().tolist())
 tipo_registro_list = sorted(original_df['Tipo de Registro'].dropna().unique().tolist())
-projetos = sorted(original_df['Código Projeto'].dropna().unique().tolist())
+cod_projetos = sorted(original_df['Código Projeto'].dropna().unique().tolist())
+nome_projetos = sorted(original_df['Projeto'].dropna().unique().tolist())
 
 filtro_parceiro = st.sidebar.multiselect("Parceiro", parceiros)
 filtro_status = st.sidebar.selectbox("Status do Título", options=["Todos"] + status_list)
 filtro_fluxo = st.sidebar.selectbox("Tipo de Fluxo", options=["Todos"] + tipo_fluxo_list)
 filtro_tipo_registro = st.sidebar.selectbox("Tipo de Registro", options=["Todos"] + tipo_registro_list)
-filtro_projeto = st.sidebar.selectbox("Código Projeto", options=["Todos"] + [str(p) for p in projetos])
+filtro_cod_projeto = st.sidebar.selectbox("Código Projeto", options=["Todos"] + [str(p) for p in cod_projetos])
+filtro_nome_projeto = st.sidebar.selectbox("Projeto", options=["Todos"] + nome_projetos)
 
 # Aplica filtros
 df = original_df.copy()
@@ -97,8 +99,10 @@ if filtro_fluxo != "Todos":
     df = df[df['Tipo de Fluxo'] == filtro_fluxo]
 if filtro_tipo_registro != "Todos":
     df = df[df['Tipo de Registro'] == filtro_tipo_registro]
-if filtro_projeto != "Todos":
-    df = df[df['Código Projeto'].astype(str) == filtro_projeto]
+if filtro_cod_projeto != "Todos":
+    df = df[df['Código Projeto'].astype(str) == filtro_cod_projeto]
+if filtro_nome_projeto != "Todos":
+    df = df[df['Projeto'] == filtro_nome_projeto]
 
 # Totalizador horizontal
 df_valores = df.copy()
