@@ -20,24 +20,24 @@ def carregar_dados():
         conn = pyodbc.connect(conn_str)
         query = """
             SELECT
-                nro_unico AS numero_unico,
+                CAST(nro_unico AS INT) AS numero_unico,
                 tipo_fluxo,
-                desdobramento,
-                nro_nota,
+                CAST(desdobramento AS INT) AS desdobramento,
+                CAST(nro_nota AS INT) AS nro_nota,
                 serie_nota,
-                nro_unico_nota,
-                data_faturamento,
-                data_negociacao,
-                data_movimentacao,
-                data_vencimento,
-                data_baixa,
+                CAST(nro_unico_nota AS INT) AS nro_unico_nota,
+                CAST(data_faturamento AS DATE) AS data_faturamento,
+                CAST(data_negociacao AS DATE) AS data_negociacao,
+                CAST(data_movimentacao AS DATE) AS data_movimentacao,
+                CAST(data_vencimento AS DATE) AS data_vencimento,
+                CAST(data_baixa AS DATE) AS data_baixa,
                 nome_parceiro,
                 cnpj_cpf,
                 desc_top,
                 desc_projeto,
                 historico,
-                valor_desdobramento,
-                valor_baixa,
+                CAST(valor_desdobramento AS FLOAT) AS valor_desdobramento,
+                CAST(valor_baixa AS FLOAT) AS valor_baixa,
                 status_titulo
             FROM nacional_fluxo;
         """
@@ -52,6 +52,7 @@ def carregar_dados():
     except Exception as e:
         st.error(f"Erro ao carregar dados: {e}")
         st.stop()
+
 # Codifica imagem da logo
 with open("nacional-escuro.svg", "rb") as image_file:
     encoded = base64.b64encode(image_file.read()).decode()
