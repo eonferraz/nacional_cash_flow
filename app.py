@@ -19,25 +19,25 @@ def carregar_dados():
     conn = pyodbc.connect(conn_str)
     query = """
         SELECT
-            nro_unico AS "Nº Único",
-            tipo_fluxo AS "Tipo de Fluxo",
-            desdobramento AS "Desdobramento",
-            nro_nota AS "Nº Nota",
-            serie_nota AS "Série",
-            nro_unico_nota AS "Nº Único da Nota",
-            data_faturamento AS "Data de Faturamento",
-            data_negociacao AS "Data de Negociação",
-            data_movimentacao AS "Data de Movimento",
-            data_vencimento AS "Vencimento",
-            data_baixa AS "Data de Baixa",
-            nome_parceiro AS "Parceiro",
-            cnpj_cpf AS "CNPJ",
-            desc_top AS "Tipo de Operação",
-            desc_projeto AS "Projeto",
-            historico AS "Histórico",
-            valor_desdobramento AS "Valor do Desdobramento",
-            valor_baixa AS "Valor da Baixa",
-            status_titulo AS "Status"
+            nro_unico AS [Nº Único],
+            tipo_fluxo AS [Tipo de Fluxo],
+            desdobramento AS [Desdobramento],
+            nro_nota AS [Nº Nota],
+            serie_nota AS [Série],
+            nro_unico_nota AS [Nº Único da Nota],
+            data_faturamento AS [Data de Faturamento],
+            data_negociacao AS [Data de Negociação],
+            data_movimentacao AS [Data de Movimento],
+            data_vencimento AS [Vencimento],
+            data_baixa AS [Data de Baixa],
+            nome_parceiro AS [Parceiro],
+            cnpj_cpf AS [CNPJ],
+            desc_top AS [Tipo de Operação],
+            desc_projeto AS [Projeto],
+            historico AS [Histórico],
+            valor_desdobramento AS [Valor do Desdobramento],
+            valor_baixa AS [Valor da Baixa],
+            status_titulo AS [Status]
         FROM nacional_fluxo;
     """
     df = pd.read_sql(query, conn)
