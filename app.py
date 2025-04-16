@@ -56,7 +56,7 @@ logo_img = f"data:image/svg+xml;base64,{encoded}"
 
 # Header com logo e título alinhados verticalmente ao centro
 st.markdown(f"""
-    <div style='display: flex; align-items: center; gap: 10px;'>
+    <div style='display: flex; align-items: center; gap: 20px;'>
         <img src='{logo_img}' width='80'>
         <h1 style='margin: 0;'>Fluxo de Caixa</h1>
     </div>
@@ -68,8 +68,8 @@ original_df = carregar_dados()
 # Filtros
 st.sidebar.header("Filtros")
 hoje = datetime.today()
-data_inicio = st.sidebar.date_input("Data Inicial", value=datetime(hoje.year, 1, 1))
-data_fim = st.sidebar.date_input("Data Final", value=hoje)
+data_inicio = st.sidebar.date_input("Data Inicial (Vencimento)", value=datetime(hoje.year, 1, 1))
+data_fim = st.sidebar.date_input("Data Final (Vencimento)", value=hoje)
 
 parceiros = sorted(original_df['Parceiro'].dropna().unique().tolist())
 status_list = sorted(original_df['Status do Título'].dropna().unique().tolist())
@@ -87,9 +87,9 @@ filtro_nome_projeto = st.sidebar.selectbox("Projeto", options=["Todos"] + nome_p
 
 # Aplica filtros
 df = original_df.copy()
-df['Data de Faturamento'] = pd.to_datetime(df['Data de Faturamento'], dayfirst=True, errors='coerce')
-df = df[df['Data de Faturamento'].notna()]
-df = df[(df['Data de Faturamento'] >= pd.to_datetime(data_inicio)) & (df['Data de Faturamento'] <= pd.to_datetime(data_fim))]
+df['Data de Vencimento'] = pd.to_datetime(df['Data de Vencimento'], dayfirst=True, errors='coerce')
+df = df[df['Data de Vencimento'].notna()]
+df = df[(df['Data de Vencimento'] >= pd.to_datetime(data_inicio)) & (df['Data de Vencimento'] <= pd.to_datetime(data_fim))]
 if filtro_parceiro:
     df = df[df['Parceiro'].isin(filtro_parceiro)]
 if filtro_status != "Todos":
