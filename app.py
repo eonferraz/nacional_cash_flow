@@ -12,10 +12,10 @@ def carregar_dados():
     try:
         conn_str = (
             'DRIVER={ODBC Driver 17 for SQL Server};'
-            'SERVER=sx-global.database.windows.net;'
-            'DATABASE=sx_comercial;'
-            'UID=paulo.ferraz;'
-            'PWD=Gs!^42j$G0f0^EI#ZjRv'
+            'SERVER=benu.database.windows.net,1433;'
+            'DATABASE=benu;'
+            'UID=eduardo.ferraz;'
+            'PWD=8h!0+a~jL8]B6~^5s5+v'
         )
         conn = pyodbc.connect(conn_str)
         query = """
@@ -93,14 +93,12 @@ if filtro_fluxo:
 
 # Totalizador
 st.markdown("### Totais")
-df_valores = original_df.copy()
+df_valores = df.copy()
 df_valores['Valor do Desdobramento'] = df_valores['Valor do Desdobramento'].replace('[R$\s]', '', regex=True).str.replace('.', '').str.replace(',', '.').astype(float)
 df_valores['Valor da Baixa'] = df_valores['Valor da Baixa'].replace('[R$\s]', '', regex=True).str.replace('.', '').str.replace(',', '.').astype(float)
 
-filtros_iguais = df_valores[df_valores['Parceiro'].isin(df['Parceiro']) & df_valores['Status do Título'].isin(df['Status do Título']) & df_valores['Tipo de Fluxo'].isin(df['Tipo de Fluxo'])]
-
-total_desdobramento = filtros_iguais['Valor do Desdobramento'].sum()
-total_baixa = filtros_iguais['Valor da Baixa'].sum()
+total_desdobramento = df_valores['Valor do Desdobramento'].sum()
+total_baixa = df_valores['Valor da Baixa'].sum()
 
 st.metric("Total Desdobrado", f"R$ {total_desdobramento:,.2f}".replace('.', '#').replace(',', '.').replace('#', ','))
 st.metric("Total Baixado", f"R$ {total_baixa:,.2f}".replace('.', '#').replace(',', '.').replace('#', ','))
