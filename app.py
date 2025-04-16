@@ -26,7 +26,6 @@ def carregar_dados():
                 CAST(nro_nota AS INT) AS "Número da Nota",
                 serie_nota AS "Série",
                 CAST(nro_unico_nota AS INT) AS "Número Único Nota",
-                FORMAT(data_faturamento, 'dd/MM/yyyy') AS "Data de Faturamento",
                 FORMAT(data_negociacao, 'dd/MM/yyyy') AS "Data de Negociação",
                 FORMAT(data_movimentacao, 'dd/MM/yyyy') AS "Data de Movimentação",
                 FORMAT(data_vencimento, 'dd/MM/yyyy') AS "Data de Vencimento",
