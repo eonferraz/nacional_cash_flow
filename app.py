@@ -103,6 +103,9 @@ if filtro_cod_projeto != "Todos":
 if filtro_nome_projeto != "Todos":
     df = df[df['Projeto'] == filtro_nome_projeto]
 
+# Formata a data de vencimento para exibição
+df['Data de Vencimento'] = df['Data de Vencimento'].dt.strftime('%d/%m/%Y')
+
 # Totalizador horizontal
 df_valores = df.copy()
 df_valores['Valor do Desdobramento'] = df_valores['Valor do Desdobramento'].replace('[R$\s]', '', regex=True).str.replace('.', '').str.replace(',', '.').astype(float)
