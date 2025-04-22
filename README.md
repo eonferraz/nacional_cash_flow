@@ -3,10 +3,7 @@
 Este projeto é um dashboard interativo desenvolvido em Streamlit para visualização dos dados de faturamento da empresa Nacional Indústria Mecânica.
 
 ## Funcionalidades
-- Gráfico de faturamento mensal
-- Faturamento por operação
-- Faturamento por cliente (Top 10)
-- Tabela com heatmap de receitas
+
 
 ## Tecnologias utilizadas
 - Python 3.10+
